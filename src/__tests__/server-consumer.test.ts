@@ -1,7 +1,7 @@
-import {Getter} from "@loopback/core";
-import {Consumer, Producer} from "kafkajs";
-import {KafkaConnector} from "../lib/kafka-connector";
-import {waitFor} from "../lib/tools";
+import { Getter } from "@loopback/core";
+import { Consumer, Producer } from "kafkajs";
+import { KafkaConnector } from "../lib/kafka-connector";
+import { waitFor } from "../lib/tools";
 import {
   BusMessage,
   ClientConnector,
@@ -9,11 +9,11 @@ import {
   ConsumeMsgHandler,
   KafkaBusOptions,
 } from "../lib/types";
-import {ClientConnectorProvider} from "../providers/client-connector.provider";
-import {KafkaConnectorProvider} from "../providers/kafka-connector.provider";
-import {KafkaConsumerProvider} from "../providers/kafka-consumer.provider";
-import {KafkaProducerProvider} from "../providers/kafka-producer.provider";
-import {KafkaServer} from "../servers/kafka-server";
+import { ClientConnectorProvider } from "../providers/client-connector.provider";
+import { KafkaConnectorProvider } from "../providers/kafka-connector.provider";
+import { KafkaConsumerProvider } from "../providers/kafka-consumer.provider";
+import { KafkaProducerProvider } from "../providers/kafka-producer.provider";
+import { KafkaServer } from "../servers/kafka-server";
 
 const TOPIC = "kafka-bus-adapter.out";
 
