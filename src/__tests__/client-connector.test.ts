@@ -1,13 +1,13 @@
-import {Producer} from "kafkajs";
-import {KafkaConnector} from "../lib/kafka-connector";
+import { Producer } from "kafkajs";
+import { KafkaConnector } from "../lib/kafka-connector";
 import {
   ClientConnector,
   ConnectorOptions,
   OperationStatus,
 } from "../lib/types";
-import {ClientConnectorProvider} from "../providers/client-connector.provider";
-import {KafkaConnectorProvider} from "../providers/kafka-connector.provider";
-import {KafkaProducerProvider} from "../providers/kafka-producer.provider";
+import { ClientConnectorProvider } from "../providers/client-connector.provider";
+import { KafkaConnectorProvider } from "../providers/kafka-connector.provider";
+import { KafkaProducerProvider } from "../providers/kafka-producer.provider";
 
 const TOPIC = "kafka-bus-adapter.out";
 
