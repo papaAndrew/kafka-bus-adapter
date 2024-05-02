@@ -16,8 +16,7 @@
   },
   "keywords": [
     "loopback4",
-    "amqp",
-    "amqbus",
+    "kafka",
     "adapter"
   ],
   "author": "papaAndrew",
