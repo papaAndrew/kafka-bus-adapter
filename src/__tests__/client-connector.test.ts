@@ -14,7 +14,7 @@ const TOPIC = "kafka-bus-adapter.out";
 const CONNECTION_OPTIONS =
   require("./secret/test-server.json") as ConnectorOptions;
 
-describe.skip("The ClientRequest", () => {
+describe("The ClientRequest", () => {
   let connector: KafkaConnector;
   let producer: Producer;
   let client: ClientConnector;

@@ -11,7 +11,7 @@ describe("Tool functions", () => {
     };
     const res = omitUndefined(obj);
 
-    console.log("res", res);
+    // console.log("res", res);
 
     expect(res).toMatchObject(ref);
   });

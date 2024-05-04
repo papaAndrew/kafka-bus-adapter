@@ -1,5 +1,7 @@
 import { Producer, logLevel } from "kafkajs";
-import { createRecord, omitUndefined } from "./tools";
+import { ClientRequest } from "./client-request";
+import { KafkaServer } from "./kafka-server";
+import { createRecord } from "./tools";
 import {
   ClientConnector,
   OperationResult,
@@ -15,7 +17,10 @@ export interface LogEntry {
 }
 
 export class KafkaClientConnector implements ClientConnector {
-  constructor(private producer: Producer) {}
+  constructor(
+    private producer: Producer,
+    private server?: KafkaServer,
+  ) {}
 
   log(logEntry: LogEntry) {
     const logger = this.producer.logger();
@@ -38,39 +43,48 @@ export class KafkaClientConnector implements ClientConnector {
     }
   }
 
-  async send(requestConfig: RequestConfig): Promise<ProducedRequest> {
+  async send(
+    requestConfig: RequestConfig,
+  ): Promise<ProducedRequest | OperationResult> {
     const record = createRecord(requestConfig);
 
     return this.producer
       .send(record)
       .then((rmd) => {
-        const { topicName: topic, timestamp, errorCode } = rmd[0];
-        const { value, key, headers } = requestConfig;
-
-        const result = omitUndefined<OperationResult>({
-          status: OperationStatus.SUCCESS,
-          topic,
-          value,
-          key,
-          headers,
+        const result = new ClientRequest(rmd[0], requestConfig, this.server);
+        const {
+          status,
           errorCode,
+          headers,
+          key,
+          value,
+          statusCaption,
           timestamp,
-        });
+        } = result;
 
         this.log({
           message: "Message to the Kafka PRODUCED",
-          data: { result },
+          data: {
+            status,
+            statusCaption,
+            errorCode,
+            headers,
+            key,
+            value,
+            timestamp,
+          },
         });
         return result;
       })
       .catch((err) => {
         const result: OperationResult = {
           status: OperationStatus.OPERATION_ERROR,
+          statusCaption: err.message,
           cause: err,
         };
         this.log({
-          message: "Message to the Kafka ERROR",
-          data: { result },
+          message: "Produce message ERROR",
+          data: { ...result },
           level: logLevel.ERROR,
         });
         return result;

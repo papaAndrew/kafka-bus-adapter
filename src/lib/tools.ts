@@ -1,7 +1,7 @@
-import { Message, ProducerRecord } from "kafkajs";
+import { IHeaders, Message, ProducerRecord } from "kafkajs";
 import { Readable } from "stream";
 import { v4 as uuid4 } from "uuid";
-import { RequestConfig } from "./types";
+import { BusHeaders, RequestConfig } from "./types";
 
 export function waitFor<T = boolean>(
   timeout: number,
@@ -38,42 +38,26 @@ export async function streamToString(stream: Readable): Promise<string> {
   });
 }
 
-// export function toKafkaBusMessage(topic: string, message: Message, kind: MessageKind = MessageKind.NONE): KafkaBusMessage {
-//   const {key, value, headers: iheaders, timestamp} = message;
-//   let headers: BusHeaders | undefined;
-//   if (iheaders) {
-//     headers = Object.entries(iheaders)
-//       .map(([k, v]) => {
-//         const newValue = Array.isArray(v)
-//           ? v.map(item => item.toString())
-//           : v?.toString();
-//         return ({k, newValue});
-//       })
-//       .reduce((prev, next) => {
-//         return Object.assign(prev, next);
-//       }, {})
-//   }
+export function anyToString(data: any): string {
+  if (Buffer.isBuffer(data)) {
+    return data.toString();
+  }
+  if (data instanceof Readable) {
+    return "[*stream]";
+  }
 
-//   const result: KafkaBusMessage = {
-//     kind,
-//     topic,
-//     key: key?.toString(),
-//     value: value?.toString(),
-//     headers,
-//     timestamp,
-//   }
-//   return result;
-// }
-
-// export function payloadToKafkaBusMessage(payload: EachMessagePayload, kind: MessageKind = MessageKind.RESPONSE): KafkaBusMessage {
-//   const {message, topic} = payload;
-//   return toKafkaBusMessage(topic, message, kind);
-// }
-
-// export function isConsumerRequest(payload: EachMessagePayload): boolean {
-//   // TODO !
-//   return false;
-// }
+  switch (typeof data) {
+    case "string":
+    case "bigint":
+    case "boolean":
+    case "number":
+      return String(data);
+    case "object":
+      return JSON.stringify(data);
+    default:
+      return `[*${typeof data}]`;
+  }
+}
 
 export function genUuid() {
   return uuid4();
@@ -88,22 +72,6 @@ export function genResponseKey(keyRequest: string): string | undefined {
   const [pref, id] = keyRequest.split(":");
   if (pref === "RQID") {
     return `RSID:${id}`;
-  }
-}
-
-/**
- *
- * @param keyRequest in format `RQID:${id}`
- * @param keyResponse in format `RSID:${id}`
- */
-export function findCorrelatedId(
-  keyRequest: string,
-  keyResponse: string,
-): string | undefined {
-  const [rqPref, rqId] = keyRequest.split(":");
-  const [rsPref, rsId] = keyResponse.split(":");
-  if (rqPref === "RQID" && rsPref === "RSID" && rqId === rsId) {
-    return rsId;
   }
 }
 
@@ -130,4 +98,17 @@ export function omitUndefined<T>(obj: object): T {
       });
     }, {});
   return result as T;
+}
+
+export function toBusHeaders(iheaders: IHeaders | undefined) {
+  if (iheaders) {
+    const busHeaders: BusHeaders = Object.entries(iheaders)
+      .map(([k, v]) => {
+        return { [k]: anyToString(v) };
+      })
+      .reduce((prev, next) => {
+        return Object.assign(prev, next);
+      }, {});
+    return busHeaders;
+  }
 }

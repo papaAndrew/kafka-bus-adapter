@@ -1,3 +1,11 @@
+/**
+ *
+ */
+
+export const HEADER_MESSAGE_ID = "HEventId";
+
+export const HEADER_CORRELATION_ID = "HEventMainId";
+
 export type ErrorHandler = (err?: any) => void;
 
 export type ConsumerTopics = (string | RegExp)[];
@@ -69,6 +77,17 @@ export interface KafkaBusOptions {
 
 export type BusHeaders = Record<string, string>;
 
+export type IHeaderValue = Buffer | string | (Buffer | string)[] | undefined;
+export interface HeaderMap {
+  getValue(key: string): IHeaderValue;
+  setValue(key: string, value: IHeaderValue): void;
+  getString(key: string): string | undefined;
+  setString(key: string, value: string): void;
+  getStrings(key: string): string[] | undefined;
+  setStrings(key: string, value: string[]): void;
+  isHeader(key: string): boolean;
+}
+
 /**
  * Конфигурация клиентского запроса
  */
@@ -107,9 +126,9 @@ export interface RequestConfig extends BusMessage {}
 export enum OperationStatus {
   SUCCESS = "SUCCESS",
   OPERATION_ERROR = "OPERATION_ERROR",
-  // CONFIG_ERROR = "CONFIG_ERROR",
+  TIMED_OUT = "TIMED_OUT",
+  CONFIG_ERROR = "CONFIG_ERROR",
   // ACCESS_ERROR = "ACCESS_ERROR",
-  // TIMED_OUT = "TIMED_OUT",
 }
 
 /**
@@ -120,18 +139,35 @@ export interface OperationResult extends BusMessage {
   statusCaption?: string;
   errorCode?: number;
   cause?: any; // Error
+  headerMap?: HeaderMap;
 }
 
 /**
  * Дескриптор результата операции Produce
  */
-export interface ProducedRequest extends OperationResult {}
+export interface ProducedRequest extends OperationResult {
+  ackReply(timeout?: number): Promise<OperationResult>;
+}
 
 /**
  *
  */
 export interface ClientConnector {
-  send(requestConfig: RequestConfig): Promise<ProducedRequest>;
+  send(
+    requestConfig: RequestConfig,
+  ): Promise<ProducedRequest | OperationResult>;
 }
 
-export type ConsumeMsgHandler = (busMessage: BusMessage) => void;
+/**
+ *
+ */
+export interface ConsumedMessage extends BusMessage {
+  topic: string | undefined;
+  timestamp: string;
+  headerMap: HeaderMap;
+}
+
+/**
+ *
+ */
+export type ConsumeMsgHandler = (consumedMessage: ConsumedMessage) => void;
