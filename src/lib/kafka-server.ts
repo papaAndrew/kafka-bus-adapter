@@ -15,15 +15,18 @@ import {
   EachMessagePayload,
   Logger,
 } from "kafkajs";
+import { IHeaderMap } from "./iheader-map";
+import { KafkaBusBindings } from "./keys";
+import { omitUndefined, toBusHeaders } from "./tools";
 import {
-  BusHeaders,
-  BusMessage,
+  ConsumedMessage,
   ConsumeMsgHandler,
   ConsumerTopics,
-  KafkaBusBindings,
+  HEADER_CORRELATION_ID,
   KafkaBusOptions,
-  omitUndefined,
 } from "./types";
+
+export type QueueRq = Record<string, ConsumedMessage | null>;
 
 @injectable({ scope: BindingScope.APPLICATION })
 export class KafkaServer extends Context implements Server {
@@ -31,7 +34,9 @@ export class KafkaServer extends Context implements Server {
 
   private consumer?: Consumer;
 
-  logger?: Logger;
+  private queue: QueueRq = {};
+
+  private logger?: Logger;
 
   constructor(
     @inject(KafkaBusBindings.OPTIONS)
@@ -54,42 +59,45 @@ export class KafkaServer extends Context implements Server {
     if (this.options.topic) {
       this.consumer = await this.consumerGetter();
       this.logger = this.consumer.logger();
+      // this.logger.setLogLevel(logLevel.DEBUG);
     }
+  }
+
+  public queResponse(consumedMessage: ConsumedMessage): boolean {
+    const correlationId = consumedMessage.headerMap.getString(
+      HEADER_CORRELATION_ID,
+    );
+
+    if (correlationId) {
+      this.queue[correlationId] = consumedMessage;
+      return true;
+    }
+    return false;
   }
 
   private async fetchMessage(payload: EachMessagePayload) {
     const { message, topic } = payload;
     const { key, timestamp, value, headers } = message;
 
-    let busHeaders: BusHeaders;
-    if (headers) {
-      busHeaders = Object.entries(headers)
-        .map(([k, v]) => {
-          const newValue = Array.isArray(v)
-            ? v.map((item) => item.toString())
-            : v?.toString();
-          return { k, newValue };
-        })
-        .reduce((prev, next) => {
-          return Object.assign(prev, next);
-        }, {});
-    }
-    const busMessage: BusMessage = omitUndefined({
+    const consumedMessage = omitUndefined<ConsumedMessage>({
       topic,
-      headers: busHeaders,
+      headers: toBusHeaders(headers),
       key: key?.toString(),
       value: value?.toString(),
       timestamp,
+      headerMap: new IHeaderMap(headers),
     });
 
-    const logger = this.consumer?.logger();
-    logger.info("Message consumed", busMessage);
-
-    const onConsume = await this.onConsumeGetter?.();
-    if (onConsume) {
-      onConsume(busMessage);
+    if (this.queResponse(consumedMessage)) {
+      this.logger.info("Response message consumed", consumedMessage);
     } else {
-      logger.warn("Consume message Handler not bound!");
+      const onConsume = await this.onConsumeGetter?.();
+      if (onConsume) {
+        this.logger.info("Message consumed", consumedMessage);
+        onConsume(consumedMessage);
+      } else {
+        this.logger.warn("Consume message Handler not bound!");
+      }
     }
   }
 
@@ -131,5 +139,28 @@ export class KafkaServer extends Context implements Server {
   public async stop() {
     this._listening = false;
     await this.consumer?.disconnect();
+  }
+
+  public queRegister(requestId: string) {
+    const value = requestId in this.queue ? this.queue[requestId] : null;
+    this.queue[requestId] = value;
+  }
+
+  public queLocate(requestId: string) {
+    if (requestId in this.queue) {
+      return this.queue[requestId];
+    }
+  }
+
+  public queRemove(requestId: string) {
+    const newQueue = Object.entries(this.queue)
+      .filter(([k, v]) => k !== requestId)
+      .reduce((prev, [k, v]) => {
+        return Object.assign(prev, {
+          [k]: v,
+        });
+      }, {});
+
+    this.queue = newQueue;
   }
 }

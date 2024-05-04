@@ -5,8 +5,8 @@ import {
   CoreBindings,
 } from "@loopback/core";
 import { Consumer, Producer } from "kafkajs";
-import { KafkaServer } from "../servers/kafka-server";
 import { KafkaConnector } from "./kafka-connector";
+import { KafkaServer } from "./kafka-server";
 import {
   ClientConnector,
   ConsumeMsgHandler,

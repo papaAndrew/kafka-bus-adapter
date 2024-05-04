@@ -6,6 +6,7 @@ import {
   ProviderMap,
   inject,
 } from "@loopback/core";
+import { KafkaServer } from "./lib/kafka-server";
 import { KafkaBusBindings } from "./lib/keys";
 import { KafkaBusOptions } from "./lib/types";
 import { ClientConnectorProvider } from "./providers/client-connector.provider";
@@ -13,7 +14,6 @@ import { FatalErrorHandlerProvider } from "./providers/fatal-error-handler.provi
 import { KafkaConnectorProvider } from "./providers/kafka-connector.provider";
 import { KafkaConsumerProvider } from "./providers/kafka-consumer.provider";
 import { KafkaProducerProvider } from "./providers/kafka-producer.provider";
-import { KafkaServer } from "./servers/kafka-server";
 
 export class KafkaBusComponent implements Component, LifeCycleObserver {
   bindings = [
